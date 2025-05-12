@@ -1,0 +1,703 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="How I built a machine learning system to predict telecom customer churn and segment users for targeted retention strategies">
+  <title>Telecom Customer Churn Prediction & Segmentation: A Data Science Deep Dive</title>
+  <style>
+    :root {
+      --primary-color: #2980b9;
+      --secondary-color: #3498db;
+      --text-color: #333;
+      --background-color: #fff;
+      --header-color: #2c3e50;
+      --border-color: #eee;
+      --highlight-bg: #f0f7fd;
+      --highlight-border: #d0e3f0;
+      --tag-bg: #e0f2f1;
+      --tag-color: #00695c;
+      --caption-color: #666;
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #3498db;
+      --secondary-color: #2980b9;
+      --text-color: #f0f0f0;
+      --background-color: #121212;
+      --header-color: #f5f5f5;
+      --border-color: #333;
+      --highlight-bg: #1e3a5f;
+      --highlight-border: #2d4b7a;
+      --tag-bg: #1e3d36;
+      --tag-color: #4db6ac;
+      --caption-color: #aaa;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.7;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      color: var(--text-color);
+      background-color: var(--background-color);
+      transition: background-color 0.3s, color 0.3s;
+      position: relative;
+    }
+
+    header {
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      color: var(--header-color);
+      font-size: 2.2rem;
+      margin-bottom: 15px;
+      line-height: 1.3;
+    }
+
+    h2 {
+      color: var(--primary-color);
+      margin-top: 40px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: var(--secondary-color);
+      margin-top: 25px;
+    }
+
+    p {
+      margin-bottom: 15px;
+    }
+
+    a {
+      color: var(--secondary-color);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    blockquote {
+      background-color: rgba(41, 128, 185, 0.1);
+      border-left: 4px solid var(--primary-color);
+      padding: 15px 20px;
+      margin: 25px 0;
+      font-style: italic;
+      color: var(--text-color);
+    }
+
+    ul, ol {
+      margin-bottom: 20px;
+      padding-left: 25px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .highlight-box {
+      background-color: var(--highlight-bg);
+      border: 1px solid var(--highlight-border);
+      border-radius: 4px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+
+    .meta {
+      color: var(--caption-color);
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+    }
+
+    .tags {
+      margin-top: 40px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .tag {
+      display: inline-block;
+      background-color: var(--tag-bg);
+      color: var(--tag-color);
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+    }
+
+    .conclusion {
+      background-color: rgba(249, 249, 249, 0.1);
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 30px;
+    }
+
+    .image-container {
+      margin: 30px 0;
+      text-align: center;
+    }
+
+    .image-container img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+
+    .caption {
+      font-size: 0.9rem;
+      color: var(--caption-color);
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin: 25px 0;
+    }
+
+    .image-grid img {
+      width: 100%;
+      height: auto;
+    }
+
+    /* Button Container Styles */
+    .button-container {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 5px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 0 0 0 6px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      transition: background 0.3s;
+    }
+
+    [data-theme="dark"] .button-container {
+      background: rgba(30,30,30,0.8);
+    }
+
+    /* GitHub Button Styles */
+    .github-button {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: #24292e;
+      color: white;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .github-button:hover {
+      background-color: #2d3338;
+      transform: translateY(-2px);
+    }
+
+    .github-button svg {
+      margin-right: 8px;
+      fill: white;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Kaggle Button Styles */
+    .kaggle-button {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: #20BEFF;
+      color: white;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .kaggle-button:hover {
+      background-color: #0096D6;
+      transform: translateY(-2px);
+    }
+
+    .kaggle-button svg {
+      margin-right: 8px;
+      fill: white;
+      width: 16px;
+      height: 16px;
+    }
+
+    [data-theme="dark"] .github-button {
+      background-color: #f0f0f0;
+      color: #24292e;
+    }
+
+    [data-theme="dark"] .github-button svg {
+      fill: #24292e;
+    }
+
+    [data-theme="dark"] .github-button:hover {
+      background-color: #e0e0e0;
+    }
+
+    [data-theme="dark"] .kaggle-button {
+      background-color: #0096D6;
+    }
+
+    [data-theme="dark"] .kaggle-button:hover {
+      background-color: #0077B5;
+    }
+    /* Colab Button Styles */
+.colab-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #F9AB00;
+  color: black;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.colab-button:hover {
+  background-color: #f57c00;
+  transform: translateY(-2px);
+}
+
+.colab-button svg {
+  margin-right: 8px;
+  fill: black;
+  width: 16px;
+  height: 16px;
+}
+
+[data-theme="dark"] .colab-button {
+  background-color: #fbc02d;
+  color: #121212;
+}
+
+[data-theme="dark"] .colab-button svg {
+  fill: #121212;
+}
+
+[data-theme="dark"] .colab-button:hover {
+  background-color: #f9a825;
+}
+
+    /* Theme Toggle Button */
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 100;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .github-button,
+      .kaggle-button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .github-button svg,
+      .kaggle-button svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+    
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Telecom Customer Churn Prediction & Segmentation: A Data Science Deep Dive</h1>
+    
+  </header>
+
+  <section>
+    <p>In the hyper-competitive telecom industry, customer retention is the new battleground.
+         Did you know that acquiring a new customer costs <strong>5-25 times more</strong> than retaining an existing one?
+         In this project, I built a machine learning pipeline to <strong>predict customer churn</strong> and <strong>segment customers based on usage patterns</strong>,
+          helping telecom companies understand their customer base better and take preventive action. </p>
+    
+    <blockquote>
+      "What if your telecom company could predict which customers are about to leave <em>before</em> it's too late?"
+    </blockquote>
+  </section>
+
+  <section>
+    <h2>The Problem: Understanding Customer Churn</h2>
+    <p>Customer churn (when customers stop using a service) is a billion-dollar problem for telecom companies. My goal was twofold:</p>
+    <ol>
+      <li><strong>Predictive:</strong> Build a model to identify at-risk customers before they leave</li>
+      <li><strong>Strategic:</strong> Use clustering to divide the customer base into segments for better marketing and service personalization, besides understanding different risk profiles and behaviors</li>
+    </ol>
+
+    <div class="highlight-box">
+      <h3>Dataset Overview</h3>
+      <p><strong>Source:</strong> <a href="https://www.kaggle.com/datasets/blastchar/telco-customer-churn" target="_blank" rel="noopener">IBM Telco Dataset (Kaggle)</a></p>
+      <p><strong>Key Features:</strong></p>
+      <ul>
+        <li>Demographics (age, gender, partner/dependents status)</li>
+        <li>Account information (tenure, contract type, payment method)</li>
+        <li>Service details (phone/internet service, add-ons, tech support)</li>
+        <li>Charges (monthly and total)</li>
+        
+      </ul>
+      <p><strong>Target:</strong> Binary churn classification (Yes/No)</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>My Approach: From Data to Insights</h2>
+
+
+    <h3>1. Exploratory Data Analysis (EDA)</h3>
+    <ol>
+        <li><strong>Visualized churn distribution</strong> </li>
+        <li><strong>Compared churners vs non-churners in terms of contract type, payment method, and internet service</strong> </li>
+        <li><strong>Identified key churn factors: contract length, monthly charges, and tech support usage</strong></li>
+        
+        <div class="image-container">
+            <img src="{% static 'images/churnContract.jpg' %}" width="80%">
+            <img src="{% static 'images/churnSenior.jpg' %}" width="80%">
+            <div class="caption"></div>
+          </div>
+ 
+    </ol>
+    
+    <p>The EDA revealed fascinating patterns:</p>
+    <ul>
+      <li><strong>Contract type matters:</strong> Month-to-month customers churn at <strong>3× the rate</strong> of those with annual contracts</li>
+      
+      <li><strong>Senior citizens:</strong> While only 16% of customers, they churn at nearly double the rate</li>
+
+      <li><strong>The "tech support" effect:</strong> Customers without tech support churn twice as often</li>
+      
+    </ul>
+    
+    <h3>2. Data Preprocessing</h3>
+    <p>Key steps included:</p>
+    <ul>
+      <li>Handling missing values in TotalCharges <strong>(calculated as tenure × monthly charges)</strong></li>
+      <li>Encoding categorical variables <strong>(one-hot for services, label for binary features)</strong></li>
+      <li>Feature scaling <strong>(StandardScaler for numerical features)</strong></li>
+      <li>Removing customer IDs <strong>(not useful for modeling)</strong></li>
+    </ul>
+    
+    <h3>3. Model Development</h3>
+    <p>I used several models, including<strong> Logistic Regression</strong>,
+        <strong> Random Forest</strong> and<strong> XGBoost</strong>. After hyperparameter tuning and evaluation::</p>
+        <p><strong>Evaluation Metrics:</strong></p>
+
+    <ul>
+      <li><strong>Confusion Matrix</strong></li>
+      <li><strong>ROC Curve and AUC</strong></li>
+      <li><strong>Classification Report (Precision, Recall, F1-Score)</strong></li>
+    </ul>
+    <div class="image-container">
+        <img src="{% static 'images/corelations.jpg' %}" width="80%">
+        <img src="{% static 'images/confusion.jpg' %}" width="80%">
+        <div class="caption"> <strong>Confusion Matrix</strong></div>
+      </div>
+   
+    
+    <div class="highlight-box">
+      <h3>Result</h3>
+      <ul>
+        <li><strong>Best model: XGBoost</strong></li>
+        <li>Achieved <strong>83% accuracy</strong> with good precision-recall balance</li>
+        <li><strong>Precision:</strong> 0.72 (of predicted churners, 72% actually churned)</li>
+        <li><strong>Precision & Recall:</strong> Tuned based on business need (catching churners is more important than accuracy alone)</li>
+        <li><strong>ROC AUC:</strong> 0.85 (excellent discrimination power)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Customer Segmentation:</h2>
+    <p>Using K-Means clustering on usage patterns, I identified 3 distinct customer segments:</p>
+    <div class="image-container">
+        <img src="{% static 'images/elbow.jpg' %}" width="80%">
+        <div class="caption"></div>
+      </div>
+    <P><strong>These insights can help the business tailor offers and communication strategies per segment:</strong></P>
+    <h3>Segment A: The Loyalists</h3>
+    <ul>
+      <li>Long tenure (avg. 50 months)</li>
+      <li>Mostly annual contracts</li>
+      <li>Low churn risk (8%)</li>
+      <li><strong>Strategy:</strong> Reward loyalty with exclusive perks</li>
+    </ul>
+    
+    <h3>Segment B: The High-Risk Newcomers</h3>
+    <ul>
+      <li>Short tenure (<12 months)</li>
+      <li>Mostly month-to-month contracts</li>
+      <li>High churn risk (42%)</li>
+      <li><strong>Strategy:</strong> Targeted retention offers and proactive support</li>
+    </ul>
+    
+    <h3>Segment C: The Silent Risers</h3>
+    <ul>
+      <li>Mid-range tenure (12-30 months)</li>
+      <li>Gradually increasing monthly charges</li>
+      <li>Moderate churn risk (21%)</li>
+      <li><strong>Strategy:</strong> Check-in calls and personalized service bundles</li>
+    </ul>
+  </section>
+  <div class="image-container">
+    <img src="{% static 'images/2Dplot.jpg' %}" width="80%">
+    <img src="{% static 'images/Capture1.jpg' %}" width="80%">
+    <img src="{% static 'images/Capture2.jpg' %}" width="80%">
+    <div class="caption"> <strong></strong></div>
+  </div>
+
+
+  <section>
+    <h2>Coclusion:</h2>
+    <p><strong>•	Most Customers with long contracts and MonthlyTenure like the service and don't churn ,
+         on the other hand ,most Cutomers with short contracts and MonthlyTenure Churn at the beginning of the service .
+         I suggest that the Company should pay attention to the new customers especially customers with month to month contract.</strong></p>
+    
+    <P><strong>•	SeniorCitizen Customers that churn are double than young People that churn,
+         while most of SeniorCitizen have long service with the company and more interesting that they pay more than young people .
+          SeniorCitizen customers are very important to the company and the churn rate is quite high ,
+         Company must do better performance with Services with SeniorCitizen .</strong></P>
+  </section>
+
+  <section class="conclusion">
+    <h2>Key Takeaways</h2>
+    <p>This project demonstrated how data science can transform customer retention:</p>
+    <ol>
+      <li><strong>Prevention is cheaper than acquisition:</strong> Identifying at-risk customers early saves significant revenue</li>
+      <li><strong>Not all churners are equal:</strong> Different segments require different retention strategies</li>
+      <li><strong>Senior citizens need attention:</strong> Despite higher spending, they churn at nearly double the rate</li>
+      <li><strong>Contract structure matters:</strong> Month-to-month customers need special engagement strategies</li>
+    </ol>
+    
+    <p><strong>Business Impact:</strong> Implementing this system could help telecom companies reduce churn by 15-25%, saving millions in lost revenue while improving customer satisfaction through targeted interventions.</p>
+  </section>
+
+  <div class="button-container">
+    <a href="https://github.com/yourusername/telecom-churn-prediction" class="github-button" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="16" height="16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+      </svg>
+      GitHub
+    </a>
+    <a href="https://www.kaggle.com/code/osamanader55/telecome-customers-churn-prediction-segmentation" class="kaggle-button" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" width="16" height="16">
+        <path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.149.034.255-.036.315l-7.26 7.107 7.414 9.465c.095.104.117.208.07.358"></path>
+      </svg>
+      Kaggle
+    </a>
+    <a href="https://colab.research.google.com/drive/1iZwKu4I-nrOCyMwTQFemNGC7hAOOCp-s?usp=sharing" class="colab-button" target="_blank" rel="noopener">
+        <svg viewBox="0 0 256 256" width="16" height="16">
+          <path d="M128 0a128 128 0 1 0 128 128A128.145 128.145 0 0 0 128 0Zm0 240a112 112 0 1 1 112-112 112.127 112.127 0 0 1-112 112Zm-12-136v72a12 12 0 0 1-24 0v-72a12 12 0 0 1 24 0Zm60 0v36.69l22.34-22.35a12 12 0 0 1 17 17l-22.35 22.34H188a12 12 0 0 1 0-24h.69L166 139.31V104a12 12 0 0 1 24 0Z" fill="#FFB800"/>
+        </svg>
+        Colab
+      </a>
+  </div>
+  <section>
+    <h2>Technology Stack</h2>
+    
+    
+  
+    <h3>Core Technologies</h3>
+    <div class="highlight-box">
+        <h4> Python</h4>
+        <ul>
+          <li>Pandas for data manipulation</li>
+          <li>NumPy for numerical computing</li>
+          <li>Scikit-learn for machine learning</li>
+          <li>XGBoost for gradient boosting</li>
+        </ul>
+  
+        <h4> Visualization</h4>
+        <ul>
+          <li>Matplotlib for basic plots</li>
+          <li>Seaborn for statistical viz</li>
+          <li>Plotly for interactive charts</li>
+        </ul>
+  
+        <h4> Machine Learning</h4>
+        <ul>
+          <li>Logistic Regression</li>
+          <li>Random Forest</li>
+          <li>XGBoost</li>
+          <li>K-Means Clustering</li>
+        </ul>
+    </div>
+  
+  
+  </section>
+  
+
+</body>
+</html>
+<!-- {% load static %}
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Ahmed Emad</title>
+	<link href="{% static '/css/main.css'  %}" rel="stylesheet" type="text/css">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	
+</head>
+<body>
+
+	    {% include 'base/navbar.html' %}
+
+<br>
+ <h1>Telecom Customer Churn Prediction & Segmentation: A Data Science Deep Dive</h1>
+
+  <h2>1. Introduction</h2>
+  <p>In today’s competitive telecom industry, retaining customers is more cost-effective than acquiring new ones. Telecom companies lose millions yearly due to churn. Predicting at-risk customers helps retain them proactively.</p>
+  <p>In this project, I built a machine learning pipeline to predict customer churn and segment customers based on usage patterns, helping telecom companies understand their customer base better and take preventive action.</p>
+  <blockquote>What if your telecom company could predict which customers are about to leave before it’s too late?</blockquote>
+
+  <h2>2. Dataset & Tools Used</h2>
+  <h3>Dataset</h3>
+  <p><strong>Source:</strong> <a href="https://www.kaggle.com/datasets/blastchar/telco-customer-churn" target="_blank">Kaggle/IBM Telco Dataset</a></p>
+  <p><strong>Features:</strong></p>
+  <ul>
+    <li>Demographic data (gender, senior citizen)</li>
+    <li>Service data (internet, phone, contracts)</li>
+    <li>Usage data (tenure, monthly charges, total charges)</li>
+  </ul>
+  <p><strong>Target Variable:</strong> Churn (Yes = 1 / No = 0)</p>
+
+  <h3>Problem Definition</h3>
+  <p>The goal of this project was twofold:</p>
+  <ul>
+    <li><strong>Predict Churn:</strong> Train a model to classify whether a customer will leave the telecom service based on usage patterns and demographic data.</li>
+    <li><strong>Segment Customers:</strong> Use clustering to divide the customer base into segments for better marketing and service personalization.</li>
+  </ul>
+
+  <h2>3. Methodology (Step-by-Step)</h2>
+  <h3>1. Exploratory Data Analysis (EDA)</h3>
+  <ul>
+    <li>Visualized churn distribution</li>
+    <li>Compared churners vs non-churners in terms of contract type, payment method, and internet service</li>
+    <li>Identified key churn factors: contract length, monthly charges, and tech support usage</li>
+  </ul>
+  <p><strong>Key visualizations:</strong></p>
+  <ul>
+    <li>Customers with month-to-month contracts churn 3x more than long-term clients.</li>
+    <li>High monthly charges correlate with churn risk.</li>
+  </ul>
+
+  <h3>2. Data Preprocessing</h3>
+  <ul>
+    <li>Handled missing values and incorrect types</li>
+    <li>Insight: TotalCharges had 11 missing values filled with median tenure × monthly charges</li>
+    <li>Categorical encoding using label encoding and one-hot encoding</li>
+    <li>Scaled numerical features with StandardScaler</li>
+    <li>Removed irrelevant columns (e.g., customer ID)</li>
+  </ul>
+
+  <h3>3. Model Training – Churn Prediction (Classification)</h3>
+  <p>I used several models, including Logistic Regression, Random Forest, and XGBoost. After hyperparameter tuning and evaluation:</p>
+  <ul>
+    <li><strong>Best model:</strong> XGBoost</li>
+    <li><strong>Accuracy:</strong> ~83%</li>
+    <li><strong>Precision & Recall:</strong> Tuned based on business need (catching churners is more important than accuracy alone)</li>
+  </ul>
+  <p><strong>Evaluation Metrics:</strong></p>
+  <ul>
+    <li>Confusion Matrix</li>
+    <li>ROC Curve and AUC</li>
+    <li>Classification Report (Precision, Recall, F1-Score)</li>
+  </ul>
+
+  <h2>4. Customer Segmentation (Clustering)</h2>
+  <p>Using unsupervised learning (KMeans), I segmented users into 3 groups based on usage patterns.</p>
+  <p><strong>Insights from Segments:</strong></p>
+  <ul>
+    <li><strong>Segment A:</strong> Long-tenure, low-churn risk, high monthly charges</li>
+    <li><strong>Segment B:</strong> New users, higher churn risk, lower charges. High-risk (low tenure, high charges) → Target with discounts.</li>
+    <li><strong>Segment C:</strong> Mid-tenure but inconsistent service usage</li>
+  </ul>
+  <p>These insights can help the business tailor offers and communication strategies per segment.</p>
+
+  <h2>6. Conclusion</h2>
+  <p><strong>Summary:</strong> This project shows how ML can predict churn and segment customers for targeted retention strategies.</p>
+  <p>Most customers with long contracts and long tenure like the service and don’t churn. On the other hand, most customers with short contracts churn early. The company should pay special attention to new customers, especially those on month-to-month contracts.</p>
+  <p>Senior Citizen customers that churn are double that of young people. While most Senior Citizens have long service duration and pay more, their churn rate is quite high. The company must enhance its services to better serve Senior Citizen customers.</p>
+</body>
+
+<div class="container">
+    <h2>E-Commerce Platform</h2>
+    <iframe width="100%" height="400" src="https://www.youtube.com/embed/GQCqNxYShUc" frameborder="0" allowfullscreen></iframe>
+    <ul>
+        <li><strong>Framework:</strong> Django</li>
+        <br>
+        <li><strong>Features:</strong>
+            <br>
+          <ul>
+            <li>Dynamic product listings</li>
+            <br>
+            <li>Shopping cart</li>
+            <br>
+            <li>Checkout process</li>
+          </ul>
+        </li>
+        <br>
+        <li><strong>Order Management:</strong> Efficiently handles product inventory, customer data, and shipping details</li>
+        <br>
+        <li><strong>User Authentication:</strong> Secure login and registration for users</li>
+        <br>
+        <li><strong>Payment Integration:</strong> PayPal for payment processing</li>
+        <br>
+        <li><strong>Data Models:</strong> Designed relational models and views for inventory and customer data</li>
+    </ul>
+    <h4>Technologies Used</h4>
+    <ul>
+        <li><strong>Backend Framework:</strong> Django</li>
+        <br>
+        <li><strong>Authentication:</strong> Django built-in authentication system</li>
+        <br>
+        <li><strong>Payment Integration:</strong> PayPal API</li>
+        <li><strong>Frontend:</strong> HTML, CSS, JavaScript, Bootstrap</li>
+        <br>
+        <li><strong>Database:</strong> SQLite3</li>
+        <br>
+        <li><strong>Models:</strong> Django relational models for product inventory and customer data</li>
+        <br>
+        <li><strong>Order Management:</strong> Custom views and logic for managing orders and shipping details</li>
+    </ul>
+    <a href="https://github.com/mellooz/E-Commerce" class="btn btn-dark" target="_blank">View on GitHub</a>
+</div>
+<br>
+</body>
+</html> -->

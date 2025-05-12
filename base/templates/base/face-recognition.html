@@ -1,0 +1,568 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="How I built a face recognition system with liveness detection to prevent spoofing attacks">
+  <title>IDentface: Building a Secure Face Recognition System with Liveness Detection</title>
+  <style>
+    :root {
+      --primary-color: #2980b9;
+      --secondary-color: #3498db;
+      --text-color: #333;
+      --background-color: #fff;
+      --header-color: #2c3e50;
+      --border-color: #eee;
+      --highlight-bg: #f0f7fd;
+      --highlight-border: #d0e3f0;
+      --tag-bg: #e0f2f1;
+      --tag-color: #00695c;
+      --caption-color: #666;
+    }
+
+    [data-theme="dark"] {
+      --primary-color: #3498db;
+      --secondary-color: #2980b9;
+      --text-color: #f0f0f0;
+      --background-color: #121212;
+      --header-color: #f5f5f5;
+      --border-color: #333;
+      --highlight-bg: #1e3a5f;
+      --highlight-border: #2d4b7a;
+      --tag-bg: #1e3d36;
+      --tag-color: #4db6ac;
+      --caption-color: #aaa;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.7;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      color: var(--text-color);
+      background-color: var(--background-color);
+      transition: background-color 0.3s, color 0.3s;
+      position: relative;
+    }
+
+    header {
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      color: var(--header-color);
+      font-size: 2.2rem;
+      margin-bottom: 15px;
+      line-height: 1.3;
+    }
+
+    h2 {
+      color: var(--primary-color);
+      margin-top: 40px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      color: var(--secondary-color);
+      margin-top: 25px;
+    }
+
+    p {
+      margin-bottom: 15px;
+    }
+
+    a {
+      color: var(--secondary-color);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    blockquote {
+      background-color: rgba(41, 128, 185, 0.1);
+      border-left: 4px solid var(--primary-color);
+      padding: 15px 20px;
+      margin: 25px 0;
+      font-style: italic;
+      color: var(--text-color);
+    }
+
+    ul, ol {
+      margin-bottom: 20px;
+      padding-left: 25px;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .highlight-box {
+      background-color: var(--highlight-bg);
+      border: 1px solid var(--highlight-border);
+      border-radius: 4px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+
+    .meta {
+      color: var(--caption-color);
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+    }
+
+    .tags {
+      margin-top: 40px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .tag {
+      display: inline-block;
+      background-color: var(--tag-bg);
+      color: var(--tag-color);
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+    }
+
+    .conclusion {
+      background-color: rgba(249, 249, 249, 0.1);
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 30px;
+    }
+
+    .image-container {
+      margin: 30px 0;
+      text-align: center;
+    }
+
+    .image-container img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+
+    .caption {
+      font-size: 0.9rem;
+      color: var(--caption-color);
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin: 25px 0;
+    }
+
+    .image-grid img {
+      width: 100%;
+      height: auto;
+    }
+
+    /* Button Container Styles */
+    .button-container {
+      position: fixed;
+      top: 0;
+      right: 0;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 5px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 0 0 0 6px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      transition: background 0.3s;
+    }
+
+    [data-theme="dark"] .button-container {
+      background: rgba(30,30,30,0.8);
+    }
+
+    /* GitHub Button Styles */
+    .github-button {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: #24292e;
+      color: white;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .github-button:hover {
+      background-color: #2d3338;
+      transform: translateY(-2px);
+    }
+
+    .github-button svg {
+      margin-right: 8px;
+      fill: white;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Kaggle Button Styles */
+    .kaggle-button {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: #20BEFF;
+      color: white;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .kaggle-button:hover {
+      background-color: #0096D6;
+      transform: translateY(-2px);
+    }
+
+    .kaggle-button svg {
+      margin-right: 8px;
+      fill: white;
+      width: 16px;
+      height: 16px;
+    }
+
+    [data-theme="dark"] .github-button {
+      background-color: #f0f0f0;
+      color: #24292e;
+    }
+
+    [data-theme="dark"] .github-button svg {
+      fill: #24292e;
+    }
+
+    [data-theme="dark"] .github-button:hover {
+      background-color: #e0e0e0;
+    }
+
+    [data-theme="dark"] .kaggle-button {
+      background-color: #0096D6;
+    }
+
+    [data-theme="dark"] .kaggle-button:hover {
+      background-color: #0077B5;
+    }
+    /* Colab Button Styles */
+.colab-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #F9AB00;
+  color: black;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.colab-button:hover {
+  background-color: #f57c00;
+  transform: translateY(-2px);
+}
+
+.colab-button svg {
+  margin-right: 8px;
+  fill: black;
+  width: 16px;
+  height: 16px;
+}
+
+[data-theme="dark"] .colab-button {
+  background-color: #fbc02d;
+  color: #121212;
+}
+
+[data-theme="dark"] .colab-button svg {
+  fill: #121212;
+}
+
+[data-theme="dark"] .colab-button:hover {
+  background-color: #f9a825;
+}
+
+    /* Theme Toggle Button */
+    .theme-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 100;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .github-button,
+      .kaggle-button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      .github-button svg,
+      .kaggle-button svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+    /* Add to your style section */
+.gif-container {
+  margin: 25px 0;
+  text-align: center;
+}
+
+.gif-container img {
+  max-width: 100%;
+  border-radius: 5px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  border: 1px solid var(--border-color);
+}
+
+/* For autoplay controls */
+.gif-controls {
+  margin-top: 10px;
+}
+
+.gif-controls button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin: 0 5px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+    
+  </style>
+</head>
+<body>
+  <header>
+    <h1>IDentface: Building a Secure Face Recognition System with Liveness Detection</h1>
+    
+  </header>
+
+  <section>
+    <p>In an era where facial recognition is becoming ubiquitous for authentication, the threat of spoofing attacks using photos, videos, or masks is a growing concern. 
+        IDentface is my solution - a robust face recognition system that combines <strong>deep learning models</strong> with <strong>liveness detection</strong> to prevent spoofing attempts.
+        This project implements a complete pipeline from face detection to recognition with active anti-spoofing measures.</p>
+    
+    <blockquote>
+      "What if your face recognition system could tell the difference between a real person and a photograph?"
+    </blockquote>
+  </section>
+
+  <section>
+    <h2>The Challenge: Secure Face Authentication</h2>
+    <p>Traditional face recognition systems are vulnerable to various spoofing attacks. IDentface addresses three key challenges:</p>
+    <ol>
+      <li><strong>Spoofing Detection:</strong> Distinguish real faces from photos, videos, or masks</li>
+      <li><strong>Accurate Recognition:</strong> High-accuracy face matching under varying conditions</li>
+      <li><strong>Real-time Performance:</strong> Fast processing suitable for authentication scenarios</li>
+    </ol>
+
+    <div class="highlight-box">
+      <h3>System Overview</h3>
+      <p><strong>Key Components:</strong></p>
+      <ul>
+        <li>Face detection using <strong>MTCNN</strong> and <strong>YOLO</strong></li>
+        <li>Liveness detection with a custom <strong>CNN model</strong></li>
+        <li>Face recognition via <strong>FaceNet</strong> embeddings</li>
+        <li>Database storage with <strong>SQLite</strong> for registered faces</li>
+        <li>Real-time processing with <strong>OpenCV</strong></li>
+      </ul>
+      <p><strong>Security Features:</strong></p>
+      <ul>
+        <li>Active liveness check with motion analysis</li>
+        <li>Texture analysis for photo/video detection</li>
+        <li>Multi-frame validation for robust decisions</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Technical Implementation</h2>
+
+    <h3>1. Face Detection Pipeline</h3>
+    <p>The system first detects faces using MTCNN or YOLO, which provides:</p>
+    <ul>
+      <li>Super speed Face detection for real-time recognition</li>
+      <li>Face bounding boxes with high accuracy</li>
+      <li>Facial landmark detection (eyes, nose, mouth)</li>
+      <li>Alignment for consistent recognition</li>
+    </ul>
+    
+
+    <!-- <div class="image-container">
+        <img src="{% static 'images/face_detection_mtcnn.jpg' %}" alt="MTCNN face detection">
+        <div class="caption">MTCNN detecting faces and facial landmarks</div>
+    </div> -->
+
+    <h3>2. Liveness Detection</h3>
+    <p>The anti-spoofing module uses a custom CNN trained on:</p>
+    <ul>
+      <li><strong>NUAA</strong> dataset (real vs printed photos)</li>
+      <li><strong>CASIA-FASD</strong> (various spoofing techniques)</li>
+      <li><strong>Replay-Attack</strong> (video replay attacks)</li>
+    </ul>
+
+    <p>Key techniques employed:</p>
+    <ol>
+      <li><strong>Texture Analysis:</strong> Detects printing artifacts and screen patterns</li>
+      <li><strong>Motion Analysis:</strong> Checks for natural micro-movements</li>
+      <li><strong>Depth Estimation:</strong> Uses facial landmarks to estimate 3D structure</li>
+    </ol>
+
+    <!-- <div class="image-container">
+        <img src="{% static 'images/liveness_detection.jpg' %}" alt="Liveness detection examples">
+        <div class="caption">Liveness detection distinguishing real faces (green) from spoofs (red)</div>
+    </div> -->
+
+    <h3>3. Face Recognition</h3>
+    <p>For recognized faces, the system:</p>
+    <ol>
+      <li>Extracts 128-dimensional embeddings using FaceNet</li>
+      <li>Compares against registered faces in database</li>
+      <li>Uses cosine similarity for matching</li>
+      <li>Sets adjustable threshold for recognition confidence</li>
+    </ol>
+
+    <div class="highlight-box">
+      <h3>Performance Metrics</h3>
+      <ul>
+        <li><strong>Liveness Detection:</strong> 98.2% accuracy on test set</li>
+        <li><strong>Face Recognition:</strong> 99.1% accuracy on LFW benchmark</li>
+        <li><strong>Processing Speed:</strong> 12-15 FPS on consumer hardware</li>
+        <li><strong>Spoofing Resistance:</strong> Detects 97% of photo/video attacks</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>System Architecture</h2>
+    <p>The complete pipeline follows this workflow:</p>
+
+    <h3>Key Modules</h3>
+    <ol>
+      <li><strong>Registration Mode:</strong>
+        <ul>
+          <li>Captures multiple face samples</li>
+          <li>Extracts and stores FaceNet embeddings</li>
+          <li>Verifies liveness during enrollment</li>
+        </ul>
+      </li>
+      <li><strong>Authentication Mode:</strong>
+        <ul>
+          <li>Performs real-time liveness check</li>
+          <li>Matches against registered identities</li>
+          <li>Provides confidence scores</li>
+        </ul>
+      </li>
+      <li><strong>Admin Interface:</strong>
+        <ul>
+          <li>Manages registered users</li>
+          <li>Adjusts security thresholds</li>
+          <li>Views access logs</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+  <section>
+    <h2>System in Action</h2>
+    
+    <div class="image-container">
+      <img src="{% static 'images/identface_gif.gif' %}" alt="IDentface demo GIF" style="max-width: 600px;">
+    </div>
+  </section>
+
+  <section>
+    <h2>Real-World Applications</h2>
+    <p>IDentface can be deployed in various scenarios:</p>
+    
+    <h3>1. Secure Authentication</h3>
+    <ul>
+      <li>Mobile app login</li>
+      <li>Banking transactions</li>
+      <li>Workplace access control</li>
+    </ul>
+
+    <h3>2. Attendance Systems</h3>
+    <ul>
+      <li>Corporate employee tracking</li>
+      <li>Educational institutions</li>
+      <li>Remote workforce monitoring</li>
+    </ul>
+
+    <h3>3. Border Control</h3>
+    <ul>
+      <li>Automated passport control</li>
+      <li>Visa verification</li>
+      <li>Watchlist screening</li>
+    </ul>
+
+    
+  </section>
+
+  <section class="conclusion">
+    <h2>Key Innovations</h2>
+    <p>IDentface advances face authentication technology by:</p>
+    <ol>
+      <li><strong>Combining multiple anti-spoofing techniques</strong> for robust security</li>
+      <li><strong>Optimizing the pipeline</strong> for real-time performance</li>
+      <li><strong>Providing adjustable security thresholds</strong> for different risk scenarios</li>
+      <li><strong>Implementing a complete end-to-end solution</strong> from enrollment to authentication</li>
+    </ol>
+    
+  </section>
+
+  <div class="button-container">
+    <a href="https://github.com/osamazaki2525/IDentface" class="github-button" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" width="16" height="16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+      </svg>
+      GitHub
+    </a>
+    <!-- <a href="https://www.kaggle.com/datasets" class="kaggle-button" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" width="16" height="16">
+        <path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.236 0-.354-.117-.354-.352V.353c0-.233.118-.353.354-.353h2.431c.234 0 .351.12.351.353v14.343l6.203-6.272c.165-.165.33-.246.495-.246h3.239c.144 0 .236.06.285.18.046.149.034.255-.036.315l-7.26 7.107 7.414 9.465c.095.104.117.208.07.358"></path>
+      </svg>
+      Kaggle
+    </a>
+    <a href="https://colab.research.google.com/" class="colab-button" target="_blank" rel="noopener">
+        <svg viewBox="0 0 256 256" width="16" height="16">
+          <path d="M128 0a128 128 0 1 0 128 128A128.145 128.145 0 0 0 128 0Zm0 240a112 112 0 1 1 112-112 112.127 112.127 0 0 1-112 112Zm-12-136v72a12 12 0 0 1-24 0v-72a12 12 0 0 1 24 0Zm60 0v36.69l22.34-22.35a12 12 0 0 1 17 17l-22.35 22.34H188a12 12 0 0 1 0-24h.69L166 139.31V104a12 12 0 0 1 24 0Z" fill="#FFB800"/>
+        </svg>
+        Colab
+      </a> -->
+  </div>
+
+  
+</body>
+</html>
